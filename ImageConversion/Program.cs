@@ -1,5 +1,6 @@
 ﻿using ImageMagick;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -11,31 +12,34 @@ namespace ImageConversion
         {
             try
             {
-                Converter.FromFolder(@"C:\Users\ashrestha\source\repos\ImageConversion\ImageConversion\j2k_bscan\");
+                if (Converter.FromFolder(args[0]))
+                {
+                    Console.WriteLine("Converted Images to WebP.");
+                }
+                else
+                    Console.WriteLine("Failed.");
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
             }
-            Console.Read();
         }
     }
 
     public class Converter
     {
-        public static void FromFolder(string folder)
+        public static bool FromFolder(string folder)
         {
             var files = Directory.GetFiles(folder);
-            Stopwatch timer = new Stopwatch();
-            timer.Start();
-            //generate jpeg
-            long dirSizeJpeg = DirSize(GenerateJpeg(files));
-            timer.Stop();
-            Console.WriteLine($"Time to process {files.Length} images to jpeg = {timer.ElapsedMilliseconds} ms, size of directory containing all images = ~{dirSizeJpeg / 1000}kb");
-            timer.Restart();
-            long dirSizeWebP = DirSize(GenerateWebP(files));
-            timer.Stop();
-            Console.WriteLine($"Time to process {files.Length} images to webP = {timer.ElapsedMilliseconds} ms, size of directory containing all images = ~{dirSizeWebP / 1000}kb");
-            //generate webP
+            List<string> images = new List<string>();
+            foreach (var file in files)
+            {
+                if (Path.GetExtension(file) == ".jpg")
+                {
+                    images.Add(file);
+                }
+            }
+            return GenerateWebP(images, folder);
         }
 
         public static long DirSize(DirectoryInfo d)
@@ -68,6 +72,26 @@ namespace ImageConversion
                 img.Write($"./JpegImages/{Path.GetFileNameWithoutExtension(file)}.jpg");
             }
             return new DirectoryInfo("./JpegImages");
+        }
+
+        private static bool GenerateWebP(List<string> Folder, string root)
+        {
+            try
+            {
+                foreach (var file in Folder)
+                {
+                    MagickImage img = new MagickImage(file);
+                    img.Format = MagickFormat.WebP;
+                    img.Quality = 75;
+                    img.Write(Path.Combine(root, $"{Path.GetFileNameWithoutExtension(file)}.webp"));
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
         }
 
         private static DirectoryInfo GenerateWebP(string[] files)
